@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import time
+import random
 
 def apply_effects_to_video(input_video_path, output_video_path):
     """
@@ -49,7 +50,7 @@ def apply_effects_to_video(input_video_path, output_video_path):
         "edge_detection": (19, 28, "3. Canny Edge Detection"),
         "morphological_gradient": (28, 36, "4. Morphological Gradient"),
         "flip": (36, 46, "5. Flip - Four Panels Mirror"),
-        "colormap": (46, 55, "6. ColorMap"),
+        "colormap": (46, 55, "6. 4x4 in 1 + ColorMap"),
         "dog_filter": (55, 64, "7. DoG Filter"),
         "gamma_correction": (64, 74, "8. Gamma Correction"),
         "face_detection_mosaic": (74, 85, "9. Face Detection + Mosaic : 2"),
@@ -160,12 +161,95 @@ def apply_effects_to_video(input_video_path, output_video_path):
             cv2.line(processed_frame, (0, quad_height), (width, quad_height), line_color, line_thickness)
 
         elif current_effect == "colormap":
-            # 彩色映射
-            # 選擇一個彩色映射類型，這裡我用 TURBO
-            # 其他選項：cv2.COLORMAP_JET, cv2.COLORMAP_HOT, cv2.COLORMAP_RAINBOW, etc.
+            # 彩色映射 - 4x4分割為十六個畫面，每個使用不同的colormap
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            processed_frame = cv2.applyColorMap(gray, cv2.COLORMAP_TURBO)
+    
+            # 定義16種不同的colormap及其英文名稱
+            colormaps = [
+                (cv2.COLORMAP_AUTUMN, "AUTUMN"),
+                (cv2.COLORMAP_BONE, "BONE"), 
+                (cv2.COLORMAP_JET, "JET"),
+                (cv2.COLORMAP_WINTER, "WINTER"),
+                (cv2.COLORMAP_RAINBOW, "RAINBOW"),
+                (cv2.COLORMAP_OCEAN, "OCEAN"),
+                (cv2.COLORMAP_SUMMER, "SUMMER"),
+                (cv2.COLORMAP_SPRING, "SPRING"),
+                (cv2.COLORMAP_COOL, "COOL"),
+                (cv2.COLORMAP_HSV, "HSV"),
+                (cv2.COLORMAP_PINK, "PINK"),
+                (cv2.COLORMAP_HOT, "HOT"),
+                (cv2.COLORMAP_PARULA, "PARULA"),
+                (cv2.COLORMAP_MAGMA, "MAGMA"),
+                (cv2.COLORMAP_INFERNO, "INFERNO"),
+                (cv2.COLORMAP_PLASMA, "PLASMA")
+            ]
 
+    
+            # 計算每個子畫面的尺寸
+            quad_width = width // 4
+            quad_height = height // 4
+    
+            # 創建一個空白畫面用於組合
+            processed_frame = np.zeros((height, width, 3), dtype=np.uint8)
+    
+            # 縮放原始灰度圖到子畫面大小
+            resized_gray = cv2.resize(gray, (quad_width, quad_height))
+
+            # 计算当前是colormap效果的第几秒（用于确定随机种子）
+            colormap_start_frame = effects_frame_ranges["colormap"][0]
+            frames_since_start = frame_count - colormap_start_frame
+
+            # 用 frame_count 或 (frame_count // fps) 作為隨機種子
+            current_second = frame_count // fps
+            random.seed(current_second)
+    
+            # 创建随机打乱的colormap顺序
+            shuffled_colormaps = colormaps.copy()
+            random.shuffle(shuffled_colormaps)
+    
+            # 創建4x4網格
+            for row in range(4):
+                for col in range(4):
+                    # 計算當前子畫面的索引
+                    index = row * 4 + col
+            
+                    # 獲取當前的colormap和名稱
+                    colormap_type, colormap_name = shuffled_colormaps[index]
+            
+                    # 應用colormap
+                    colored_frame = cv2.applyColorMap(resized_gray, colormap_type)
+            
+                    # 計算在主畫面中的位置
+                    start_y = row * quad_height
+                    end_y = start_y + quad_height
+                    start_x = col * quad_width
+                    end_x = start_x + quad_width
+            
+                    # 將處理後的子畫面放入主畫面
+                    processed_frame[start_y:end_y, start_x:end_x] = colored_frame
+            
+                    # 在左下角添加colormap名稱
+                    text_font = cv2.FONT_HERSHEY_SIMPLEX
+                    text_scale = 0.35
+                    text_thickness = 1
+                    text_color = (255, 255, 255)  # 白色文字
+                    outline_color = (0, 0, 0)     # 黑色輪廓
+            
+                    # 計算文字大小
+                    (text_w, text_h), _ = cv2.getTextSize(colormap_name, text_font, text_scale, text_thickness)
+            
+                    # 計算文字位置（左下角）
+                    text_x = start_x + 5
+                    text_y = end_y - 5
+            
+                    # 繪製文字輪廓（黑色）
+                    cv2.putText(processed_frame, colormap_name, (text_x, text_y), 
+                            text_font, text_scale, outline_color, text_thickness + 1, cv2.LINE_AA)
+            
+                    # 繪製文字（白色）
+                    cv2.putText(processed_frame, colormap_name, (text_x, text_y), 
+                            text_font, text_scale, text_color, text_thickness, cv2.LINE_AA)
+    
         elif current_effect == "dog_filter":
             # Dog濾波 (高斯差分)
             gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
