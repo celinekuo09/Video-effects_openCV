@@ -48,7 +48,7 @@ def apply_effects_to_video(input_video_path, output_video_path):
         "rotation_scale": (9, 19, "2. Rotation & Scale"),
         "edge_detection": (19, 28, "3. Canny Edge Detection"),
         "morphological_gradient": (28, 36, "4. Morphological Gradient"),
-        "flip": (36, 46, "5. Flip"),
+        "flip": (36, 46, "5. Flip - Four Panels Mirror"),
         "colormap": (46, 55, "6. ColorMap"),
         "dog_filter": (55, 64, "7. DoG Filter"),
         "gamma_correction": (64, 74, "8. Gamma Correction"),
@@ -116,8 +116,48 @@ def apply_effects_to_video(input_video_path, output_video_path):
             processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR)
 
         elif current_effect == "flip":
-            # 翻轉 (水平和垂直翻轉)
-            processed_frame = cv2.flip(frame, -1) # -1 表示水平和垂直翻轉
+            # 四分割畫面，左右鏡像效果
+            # 計算每個子畫面的尺寸
+            quad_width = width // 2
+            quad_height = height // 2
+            
+            # 創建一個空白畫面用於組合
+            processed_frame = np.zeros((height, width, 3), dtype=np.uint8)
+            
+            # 縮放原始幀到子畫面大小
+            resized_frame = cv2.resize(frame, (quad_width, quad_height))
+            
+            # 創建鏡像版本（水平翻轉）
+            mirrored_frame = cv2.flip(resized_frame, 1)
+            
+            # 創建flip版本（垂直和水平翻轉）
+            flipped_frame = cv2.flip(resized_frame, -1)
+            
+            # 創建flip且鏡像版本
+            flipped_mirrored_frame = cv2.flip(flipped_frame, 1)
+            
+            # 放置四個畫面
+            # 左上：原始
+            processed_frame[0:quad_height, 0:quad_width] = resized_frame
+            
+            # 右上：鏡像
+            processed_frame[0:quad_height, quad_width:width] = mirrored_frame
+            
+            # 左下：flip
+            processed_frame[quad_height:height, 0:quad_width] = flipped_frame
+            
+            # 右下：flip且鏡像
+            processed_frame[quad_height:height, quad_width:width] = flipped_mirrored_frame
+            
+            # 添加分割線
+            line_color = (255, 255, 255)  # 白色分割線
+            line_thickness = 1
+            
+            # 垂直分割線
+            cv2.line(processed_frame, (quad_width, 0), (quad_width, height), line_color, line_thickness)
+            
+            # 水平分割線
+            cv2.line(processed_frame, (0, quad_height), (width, quad_height), line_color, line_thickness)
 
         elif current_effect == "colormap":
             # 彩色映射
