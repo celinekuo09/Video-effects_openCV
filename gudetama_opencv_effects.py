@@ -4,7 +4,7 @@ import time
 
 def apply_effects_to_video(input_video_path, output_video_path):
     """
-    對影片應用一系列OpenCV特效。
+    對影片應用一系列OpenCV特效，並在左上角顯示特效名稱。
 
     Args:
         input_video_path (str): 輸入影片的路徑。
@@ -29,26 +29,26 @@ def apply_effects_to_video(input_video_path, output_video_path):
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # 或 'XVID' for .avi
     out = cv2.VideoWriter(output_video_path, fourcc, fps, (width, height))
 
-    # 定義每個特效的時間範圍 (秒)
+    # 定義每個特效的時間範圍 (秒) 和對應的英文名稱
     effects_timeline = {
-        "original": (0, 8),
-        "rotation_scale": (9, 18),
-        "edge_detection": (19, 27),
-        "morphological_gradient": (28, 36),
-        "flip": (37, 46),
-        "colormap": (47, 55),
-        "dog_filter": (56, 64),
-        "gamma_correction": (65, 74),
-        "face_detection_mosaic": (75, 83),
-        "sift_keypoints": (84, 92) # 修正為92秒結束，因為影片總長度可能不同
+        "original": (0, 9, "1. Original Video"),
+        "rotation_scale": (9, 19, "2. Rotation & Scale"),
+        "edge_detection": (19, 28, "3. Canny Edge Detection"),
+        "morphological_gradient": (28, 36, "4. Morphological Gradient"),
+        "flip": (36, 46, "5. Flip"),
+        "colormap": (46, 55, "6. ColorMap"),
+        "dog_filter": (55, 64, "7. DoG Filter"),
+        "gamma_correction": (64, 74, "8. Gamma Correction"),
+        "face_detection_mosaic": (74, 85, "9. Face Detection + Mosaic : 2"),
+        "sift_keypoints": (85, 95, "10. SIFT Keypoint Detection")
     }
 
     # 調整時間範圍為幀數
     effects_frame_ranges = {}
-    for effect_name, (start_sec, end_sec) in effects_timeline.items():
+    for effect_name, (start_sec, end_sec, display_name) in effects_timeline.items():
         start_frame = int(start_sec * fps)
         end_frame = int(end_sec * fps)
-        effects_frame_ranges[effect_name] = (start_frame, end_frame)
+        effects_frame_ranges[effect_name] = (start_frame, end_frame, display_name)
 
     # 臉部偵測的 Haar Cascade 分類器
     # 請替換為你實際的 haarcascade_frontalface_default.xml 路徑
@@ -66,9 +66,11 @@ def apply_effects_to_video(input_video_path, output_video_path):
             break
 
         current_effect = "original"
-        for effect_name, (start_frame, end_frame) in effects_frame_ranges.items():
+        current_display_name = "Original Video"
+        for effect_name, (start_frame, end_frame, display_name) in effects_frame_ranges.items():
             if start_frame <= frame_count <= end_frame:
                 current_effect = effect_name
+                current_display_name = display_name
                 break
 
         processed_frame = frame.copy()
@@ -160,6 +162,49 @@ def apply_effects_to_video(input_video_path, output_video_path):
             kp, des = sift.detectAndCompute(gray, None)
             # 繪製關鍵點 (第三個參數 None 表示不使用現有影像作為輸出，讓它建立新的)
             processed_frame = cv2.drawKeypoints(frame, kp, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+        
+        # 創建動態幀數顯示文字
+        frame_info_text = f"{frame_count + 1}/{total_frames} frames, FPS={fps}"
+
+        # 在左上角添加特效名稱文字
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.8
+        font_thickness = 2
+        text_color = (255, 255, 255)  # 白色文字
+        outline_color = (0, 0, 0)     # 黑色輪廓
+        
+        # 計算特效名稱文字大小
+        (text_width1, text_height1), baseline1 = cv2.getTextSize(current_display_name, font, font_scale, font_thickness)
+        # 計算幀數資訊文字大小
+        (text_width2, text_height2), baseline2 = cv2.getTextSize(frame_info_text, font, font_scale * 0.7, font_thickness - 1)
+        
+        # 計算背景矩形的總體大小（取兩行文字的最大寬度）
+        max_text_width = max(text_width1, text_width2)
+        total_text_height = text_height1 + text_height2 + 10  # 10是行間距
+        
+        # 繪製半透明背景矩形（包含兩行文字）
+        overlay = processed_frame.copy()
+        cv2.rectangle(overlay, (10, 10), (20 + max_text_width, 30 + total_text_height + max(baseline1, baseline2)), (0, 0, 0), -1)
+        cv2.addWeighted(overlay, 0.7, processed_frame, 0.3, 0, processed_frame)
+        
+        # 繪製特效名稱文字輪廓（黑色）
+        cv2.putText(processed_frame, current_display_name, (15, 15 + text_height1), 
+                   font, font_scale, outline_color, font_thickness + 1, cv2.LINE_AA)
+        
+        # 繪製特效名稱文字（白色）
+        cv2.putText(processed_frame, current_display_name, (15, 15 + text_height1), 
+                   font, font_scale, text_color, font_thickness, cv2.LINE_AA)
+
+        # 計算第二行文字的Y座標位置
+        second_line_y = 15 + text_height1 + text_height2 + 10  # 10是行間距
+        
+        # 繪製幀數資訊文字輪廓（黑色）
+        cv2.putText(processed_frame, frame_info_text, (15, second_line_y), 
+                   font, font_scale * 0.7, outline_color, font_thickness, cv2.LINE_AA)
+        
+        # 繪製幀數資訊文字（白色）
+        cv2.putText(processed_frame, frame_info_text, (15, second_line_y), 
+                   font, font_scale * 0.7, text_color, font_thickness - 1, cv2.LINE_AA)
 
         # 寫入處理後的幀
         out.write(processed_frame)
