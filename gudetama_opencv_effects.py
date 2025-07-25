@@ -5,6 +5,7 @@ import time
 def apply_effects_to_video(input_video_path, output_video_path):
     """
     對影片應用一系列OpenCV特效，並在左上角顯示特效名稱。
+    小畫面會顯示原始影片，且與主畫面同步播放。
 
     Args:
         input_video_path (str): 輸入影片的路徑。
@@ -24,6 +25,18 @@ def apply_effects_to_video(input_video_path, output_video_path):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     print(f"影片資訊：FPS={fps}, 寬={width}, 高={height}, 總幀數={total_frames}")
+
+    # 小畫面尺寸（原影片的1/4大小）
+    pip_width = width // 4
+    pip_height = height // 4
+    
+    # 小畫面位置（左側中間）
+    pip_x = 10  # 距離左邊的距離
+    pip_y = (height - pip_height) // 2  # 垂直居中
+    
+    # 小畫面邊框參數
+    border_thickness = 2
+    border_color = (255, 255, 255)  # 白色邊框
 
     # 定義輸出影片的編碼器和檔案名
     fourcc = cv2.VideoWriter_fourcc(*'mp4v') # 或 'XVID' for .avi
@@ -61,7 +74,7 @@ def apply_effects_to_video(input_video_path, output_video_path):
     start_time = time.time()
 
     while True:
-        ret, frame = cap.read()
+        ret, frame = cap.read() # 讀取原始影片幀
         if not ret:
             break
 
@@ -73,9 +86,9 @@ def apply_effects_to_video(input_video_path, output_video_path):
                 current_display_name = display_name
                 break
 
-        processed_frame = frame.copy()
+        processed_frame = frame.copy() # 建立一個副本用於處理，不影響原始幀
 
-        # 應用特效
+        # 應用特效到 processed_frame
         if current_effect == "rotation_scale":
             # 旋轉與縮放
             angle = (frame_count - effects_frame_ranges["rotation_scale"][0]) * 5  # 每幀增加5度
@@ -94,18 +107,6 @@ def apply_effects_to_video(input_video_path, output_video_path):
             # Canny
             processed_frame = cv2.Canny(gray, 100, 200)
             processed_frame = cv2.cvtColor(processed_frame, cv2.COLOR_GRAY2BGR) # 轉回BGR以便寫入彩色影片
-
-            # 你可以選擇只顯示其中一個，或將它們疊加
-            # # Sobel
-            # sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=5)
-            # sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=5)
-            # sobel = np.uint8(np.absolute(sobelx) + np.absolute(sobely))
-            # processed_frame = cv2.cvtColor(sobel, cv2.COLOR_GRAY2BGR)
-
-            # # Laplacian
-            # laplacian = cv2.Laplacian(gray, cv2.CV_64F)
-            # laplacian = np.uint8(np.absolute(laplacian))
-            # processed_frame = cv2.cvtColor(laplacian, cv2.COLOR_GRAY2BGR)
 
         elif current_effect == "morphological_gradient":
             # 形態學梯度
@@ -162,6 +163,18 @@ def apply_effects_to_video(input_video_path, output_video_path):
             kp, des = sift.detectAndCompute(gray, None)
             # 繪製關鍵點 (第三個參數 None 表示不使用現有影像作為輸出，讓它建立新的)
             processed_frame = cv2.drawKeypoints(frame, kp, None, flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+
+        # 創建小畫面：縮放原始影片幀 (不再使用 processed_frame)
+        pip_frame = cv2.resize(frame, (pip_width, pip_height), interpolation=cv2.INTER_AREA)
+        
+        # 在主畫面上繪製白色邊框
+        cv2.rectangle(processed_frame, 
+                      (pip_x - border_thickness, pip_y - border_thickness), 
+                      (pip_x + pip_width + border_thickness, pip_y + pip_height + border_thickness), 
+                      border_color, border_thickness)
+        
+        # 將小畫面嵌入到主畫面的指定位置
+        processed_frame[pip_y:pip_y + pip_height, pip_x:pip_x + pip_width] = pip_frame
         
         # 創建動態幀數顯示文字
         frame_info_text = f"{frame_count + 1}/{total_frames} frames, FPS={fps}"
@@ -189,22 +202,22 @@ def apply_effects_to_video(input_video_path, output_video_path):
         
         # 繪製特效名稱文字輪廓（黑色）
         cv2.putText(processed_frame, current_display_name, (15, 15 + text_height1), 
-                   font, font_scale, outline_color, font_thickness + 1, cv2.LINE_AA)
+                        font, font_scale, outline_color, font_thickness + 1, cv2.LINE_AA)
         
         # 繪製特效名稱文字（白色）
         cv2.putText(processed_frame, current_display_name, (15, 15 + text_height1), 
-                   font, font_scale, text_color, font_thickness, cv2.LINE_AA)
+                        font, font_scale, text_color, font_thickness, cv2.LINE_AA)
 
         # 計算第二行文字的Y座標位置
         second_line_y = 15 + text_height1 + text_height2 + 10  # 10是行間距
         
         # 繪製幀數資訊文字輪廓（黑色）
         cv2.putText(processed_frame, frame_info_text, (15, second_line_y), 
-                   font, font_scale * 0.7, outline_color, font_thickness, cv2.LINE_AA)
+                        font, font_scale * 0.7, outline_color, font_thickness, cv2.LINE_AA)
         
         # 繪製幀數資訊文字（白色）
         cv2.putText(processed_frame, frame_info_text, (15, second_line_y), 
-                   font, font_scale * 0.7, text_color, font_thickness - 1, cv2.LINE_AA)
+                        font, font_scale * 0.7, text_color, font_thickness - 1, cv2.LINE_AA)
 
         # 寫入處理後的幀
         out.write(processed_frame)
