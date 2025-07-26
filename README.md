@@ -13,8 +13,6 @@
 - **音訊自動合併**：用 MoviePy 將 OpenCV 處理後無聲影片與原始音訊流合併，生成完整成果。
 - **程式結構嚴謹，易於維護、擴展與批次自動化改造**          
 
-```markdown          
-```
 VIDEO-EFFECTS_OPENCV/
 ├── .venv/                         # Python 虛擬環境資料夾，用於管理專案依賴
 ├── .gitignore                     # Git 忽略文件，指定不應被版本控制追蹤的檔案和資料夾
@@ -24,8 +22,6 @@ VIDEO-EFFECTS_OPENCV/
 ├── gudetama_effects_with_audio.mp4# 結合了音訊的範例輸出影片
 ├── requirements.txt               # 列出專案所需的 Python 函式庫和它們的版本
 └── ぐでたまテーマソングMV(English subtitled).mp4 # 原始輸入影片（範例），用於應用特效
-```
-```
 
 ## 使用說明
 
