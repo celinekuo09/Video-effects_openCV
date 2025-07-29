@@ -20,8 +20,8 @@ VIDEO-EFFECTS_OPENCV/
 ├── .gitignore                     # Git 忽略大檔與敏感檔，指定不應被版本控制追蹤的檔案和資料夾
 ├── effects_video_processing.py    # 處理影片特效的主要腳本
 ├── finalize_video_with_audio.py   # 用於將處理後的影片與音訊合併的腳本
-├── gudetama_effects_output.mp4    # 經過特效處理後輸出的範例影片(無聲)
-├── gudetama_effects_with_audio.mp4# 結合了音訊的範例輸出影片
+├── effects_output.mp4    # 經過特效處理後輸出的範例影片(無聲)
+├── effects_with_audio.mp4# 結合了音訊的範例輸出影片
 ├── requirements.txt               # 列出專案所需的 Python 函式庫和它們的版本
 └── ぐでたまテーマソングMV(English subtitled).mp4 # 原始輸入影片（範例），用於應用特效
 ```
@@ -57,13 +57,12 @@ python finalize_video_with_audio.py
 ## 專案畫面範例
 
 - 特效影片進度/名稱標註
-  <img width="800" height="1078" alt="特效影片進度名稱標註" src="https://github.com/user-attachments/assets/d619463a-b65c-4796-a4b4-d9df2c6a68c5" />
 
 - 多畫面分割/鏡像效果
-  <img width="800" height="1078" alt="多畫面分割鏡像效果" src="https://github.com/user-attachments/assets/f42b9c24-ed7d-4182-90a1-7822957a4860" />
+
 
 - PiP 畫中畫同步展示
-  <img width="800" height="1078" alt="PiP 畫中畫同步展示" src="https://github.com/user-attachments/assets/0f129b71-282a-4f8f-a1ec-4fa35fbf552b" />
+
   
 ## 授權聲明
 
